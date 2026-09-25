@@ -1,17 +1,19 @@
 /**
- * Configuração central. Valores de mapa são PLACEHOLDERS até o mapa
- * "BATTLE ROYALE ISLAND" (Protagnst) ser importado e medido no servidor.
+ * Configuração central. Valores de mapa usam o mapa "Ixellior" (McMeddon, 3000x3000) — ver
+ * docs/DESIGN.md §1. centerX/centerZ medidos em jogo (aldeia perto do meio do mapa); floorY
+ * ainda é estimativa — só temos um ponto de referência de altura real até agora.
  */
 export const CONFIG = {
   map: {
-    /** Centro da ilha (X/Z) — ajustar após importar o mapa. */
-    centerX: 0,
-    centerZ: 0,
-    /** Lado da ilha em blocos (mapa original: 2000x2000). */
+    /** Centro medido em jogo, dentro de uma vila perto do meio do mapa Ixellior. */
+    centerX: 1552,
+    centerZ: 1562,
+    /** Lado da área usada em blocos (mapa Ixellior tem 3000x3000 no total). */
     size: 2000,
     /**
      * Y abaixo do qual tudo é removido para virar "ilha flutuante" (§1) e até onde
-     * o desmoronamento (§5) esvazia cada coluna. Ajustar após medir o relevo real do mapa.
+     * o desmoronamento (§5) esvazia cada coluna. Único dado real até agora: o chão da vila
+     * do centro está em Y=92 — ajustar depois de medir mais pontos (vale/montanha) do mapa.
      */
     floorY: 30,
     /** Topo do mundo considerado nas limpezas de coluna. */

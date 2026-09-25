@@ -10,26 +10,37 @@ Registro das decisões da sessão de planejamento. **Não reabrir**; itens "em a
   bem — o que não ficar bom é retirado. Não travar o resto do projeto esperando uma peça ficar
   perfeita de primeira.
 
-## 1. Mapa base (REVISADO — mapa original descartado)
+## 1. Mapa base (REVISADO DE NOVO — mapa final escolhido: Ixellior)
 - O mapa "BATTLE ROYALE ISLAND" (Protagnst) foi verificado e **descartado**: só existe pra Java
   Edition, o download é pago via Patreon (sem arquivo direto no site), e a descrição exige ~30
-  mods de Forge (armas, Alex's Mobs) pro terreno funcionar direito — conversão pra Bedrock
-  deixaria buracos/blocos errados em proporção desconhecida sem abrir o mundo primeiro.
-- Também foram avaliados 5 mapas de battle royale já nativos do Bedrock — nenhum serviu: os dois
-  melhores (TEF, Minewar) têm licença "todos os direitos reservados" que proíbe modificar/criar
-  obra derivada sem autorização (e o projeto literalmente desmorona o terreno deles), além de
-  virem com sistemas próprios (lobby, tempestade, água que mata) que brigariam com os nossos.
-- **Decisão**: o terreno é gerado pelo **próprio Bedrock** (geração vanilla, sem mapa externo).
-  Sem custo, sem risco de licença, sem conversão, tamanho configurável em `CONFIG.map.size`.
-- **Arena nova a cada partida**: como a zona desmorona blocos de verdade e os jogadores
-  quebram/constroem o mapa inteiro jogando, reaproveitar a mesma área pra uma partida nova não
-  funciona (nasceria cheia de buraco/escombro). Em vez de restaurar/resetar terreno (pesado pra
-  uma área de milhões de colunas), cada partida usa um **centro novo, nunca usado antes**, dentro
-  do mesmo mundo — terreno intocado = sempre limpo de fábrica. O sistema guarda os centros já
-  usados (dynamic property do mundo, sobrevive a reinício do servidor).
-- A ilha flutuante (limpar tudo abaixo de um Y) e a colagem das estruturas (ver §14) passam a
-  rodar automaticamente pra cada arena nova, não mais como preparação manual única.
-- Ao escalar para 30 jogadores, pode ser preciso aumentar a densidade de baús.
+  mods de Forge (armas, Alex's Mobs) pro terreno funcionar direito.
+- Foram avaliados 5 mapas de battle royale já nativos do Bedrock — nenhum serviu (licença "todos
+  os direitos reservados" ou sistemas próprios demais). Depois, uma leva de mapas "XK RPG
+  Survival" (Zhyrr) também não vingou (download gratuito não funcionou na prática).
+- Considerou-se gerar o terreno pelo próprio Bedrock (geração vanilla) como alternativa — **essa
+  ideia foi abandonada** depois de achar um mapa pronto que funcionou de verdade.
+- **Decisão final**: **Ixellior — RTX Map, From Arctic to Desert Volcano** (McMeddon), 3000x3000,
+  Java & Bedrock nativo. Baixado e testado com sucesso (mcworld, 223 MB, funciona). Licença via
+  FAQ do autor (não é uma licença formal, mas é clara): crédito obrigatório, proibido
+  redistribuir/vender o mapa, **modificar e construir em cima é incentivado pelo próprio autor**
+  — exatamente o nosso caso (desmoronar terreno + addon próprio, uso privado). Se o servidor um
+  dia virar público ou o mundo modificado for redistribuído, aí sim pedir autorização (Discord/PMC
+  do autor).
+- Conteúdo: uma vila construída à mão + estruturas geradas nativamente (fortalezas, masmorras,
+  minas — não baú colocado à mão). Biomas: ártico, cristal, cogumelo, tropical, deserto, vulcão.
+  Sem castelo. O mapa avisa que corta seco na borda (depois vira terreno vanilla aleatório) — o
+  lobby e a rota do dragão precisam ficar dentro da parte feita à mão.
+- **Centro medido em jogo**: X=1552, Z=1562 (dentro de uma vila, perto do meio do mapa). Y do
+  chão nesse ponto: 92 — primeiro dado real de altura, ainda falta medir mais pontos (vale e
+  montanha) pra fechar `CONFIG.map.floorY` com confiança.
+- **Pendência real, ainda em aberto**: como é um mapa ÚNICO e fixo (não gerado sob demanda), o
+  problema de "terreno destruído entre partidas" (zona desmorona, jogadores quebram/constroem)
+  **volta a existir** — a solução de "arena nova a cada partida" fazia sentido pra terreno gerado
+  infinito, não se aplica direto a um mapa de tamanho fixo. Precisa decidir: reaproveitar
+  sub-áreas diferentes dentro dos 3000x3000 (rotação limitada, esgota depois de algumas
+  partidas), ou fazer backup/restore do mundo preparado entre partidas. Ainda não resolvido.
+- Ao escalar para 30 jogadores, pode ser preciso aumentar a densidade de baús (loot table nossa,
+  não do mapa).
 
 ## 2. Hospedagem
 - BDS próprio (mesma infra do Genesis), `max-players` no server.properties. 30 jogadores por partida.

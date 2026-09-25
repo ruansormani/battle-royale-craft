@@ -53,12 +53,13 @@ npm run typecheck
    ```
 5. Reinicie o servidor. No console deve aparecer `[BR] Addon Battle Royale carregado.`
 
-> **Sobre o mapa (revisado)**: o mapa original planejado (BATTLE ROYALE ISLAND, Protagnst) foi
-> descartado — só existe pra Java, é pago via Patreon e depende de ~30 mods pra funcionar. O
-> terreno agora é **gerado pelo próprio Bedrock** (mundo normal, sem importar nada), com uma
-> arena nova sorteada a cada partida em vez de reaproveitar sempre o mesmo lugar (ver
-> `docs/DESIGN.md` §1). Isso ainda está sendo implementado — por enquanto `CONFIG.map.centerX/centerZ`
-> continua sendo um ponto fixo de teste.
+> **Sobre o mapa**: o mapa original planejado (BATTLE ROYALE ISLAND, Protagnst) foi descartado —
+> só existe pra Java, é pago via Patreon e depende de ~30 mods pra funcionar. O mapa final é o
+> **Ixellior — RTX Map, From Arctic to Desert Volcano** (McMeddon), 3000x3000, Bedrock nativo
+> (ver `docs/DESIGN.md` §1 pra licença e detalhes). `CONFIG.map.centerX/centerZ` já estão
+> ajustados com o centro medido em jogo. Ainda falta calibrar `CONFIG.map.floorY` (só temos um
+> ponto de altura real medido até agora) e decidir como resetar o terreno entre partidas, já que
+> é um mapa único e fixo (não gerado sob demanda) — pendência em aberto no ROADMAP.
 
 ## Testar
 

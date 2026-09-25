@@ -5,18 +5,20 @@ Ordem de implementação. Cada sistema fica em `src/systems/` e é testável iso
 - [x] Estrutura do projeto (manifests, build TS, README, empacotamento)
 - [x] §4 Queda inicial — dragão em linha reta + asa (`dragonDrop.ts`) — **validar em jogo**
 - [x] §9 Bloqueio do Nether (`netherBlock.ts`)
-- [x] §1 Script único de "ilha flutuante" (`floatingIsland.ts`) — **validar em jogo** —
-      **atenção: precisa virar automático por arena, ver item abaixo (mapa original descartado)**
+- [x] §1 Script único de "ilha flutuante" (`floatingIsland.ts`) — **validar em jogo**
+- [x] **Mapa final escolhido e importado**: Ixellior (McMeddon), 3000x3000, Bedrock nativo —
+      `CONFIG.map.centerX/centerZ` já atualizados com o centro medido em jogo (X=1552, Z=1562).
+      Falta medir mais pontos (vale/montanha) pra calibrar `CONFIG.map.floorY` direito.
 - [x] §5 Desmoronamento do mapa (`zone.ts`) — **validar em jogo**
 - [x] §4 Sobrevoo pós-queda + pilotagem estilo criativo + Poder 1/Poder 2 de ataque
       (`dragonFlight.ts`) — **validar em jogo**
 - [x] §3 Lobby, versão simples de teste (`lobby.ts`) — **validar em jogo**
 - [x] Cadeia automática de partida: lobby → queda → (fim da queda) dragão autônomo E zona
       começam sozinhos, sem comando manual — **validar em jogo**
-- [ ] **§1 (revisado)** Mapa original (Protagnst) descartado — só Java, pago, precisa de mods.
-      Terreno agora é gerado pelo próprio Bedrock, com arena nova (centro nunca repetido) a cada
-      partida — precisa: escolher próximo centro, carregar/gerar a área, rodar a ilha flutuante
-      automaticamente ali (hoje é manual/uma vez só)
+- [ ] **§1 (pendência real)** Reset de terreno entre partidas: o mapa Ixellior é único e fixo, e
+      a zona desmorona + jogadores destroem o mapa jogando. Ainda não decidido: rotação de
+      sub-áreas dentro dos 3000x3000 (esgota depois de algumas partidas) ou backup/restore do
+      mundo preparado — ver docs/DESIGN.md §1
 - [ ] §11 (parcial) Casa de encantamento: construir com Bloco de Estrutura, colar por arena com
       `structureManager.place()` ajustando pelo chão real do ponto — só essa estrutura por
       enquanto (construção incremental, testar antes de partir pra vila/casa de poções)
