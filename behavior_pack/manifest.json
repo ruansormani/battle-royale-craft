@@ -1,0 +1,29 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "Battle Royale BP",
+    "description": "Battle Royale para Bedrock - logica, entidades e scripts",
+    "uuid": "fb5f39e5-7886-40ba-8620-75cc3f387193",
+    "version": [0, 1, 0],
+    "min_engine_version": [1, 21, 80]
+  },
+  "modules": [
+    {
+      "type": "data",
+      "uuid": "7722ede5-99f9-46cd-8e75-1c30fee9a353",
+      "version": [0, 1, 0]
+    },
+    {
+      "type": "script",
+      "language": "javascript",
+      "uuid": "47b27c8e-640e-44be-970d-792c046d5a5c",
+      "entry": "scripts/main.js",
+      "version": [0, 1, 0]
+    }
+  ],
+  "dependencies": [
+    { "module_name": "@minecraft/server", "version": "2.0.0" },
+    { "module_name": "@minecraft/server-ui", "version": "2.0.0" },
+    { "uuid": "44c9fa12-ede1-4e04-ab17-c073cdd548f0", "version": [0, 1, 0] }
+  ]
+}
