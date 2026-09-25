@@ -11,30 +11,49 @@
  *   cruising   → voa suave até o ponto resolvido (também usado pra "descer e pousar" quando
  *                um piloto desmonta no meio do ar — mesma lógica, alvo diferente).
  *   landed     → pousado, parado; o primeiro jogador que montar vira o piloto.
- *   piloted    → um jogador pilota de verdade: a direção do olhar dele vira a direção do
- *                voo (aplicada por script, tick a tick — ver nota abaixo). O assento nativo
- *                tem 30 vagas (reaproveitado da entidade da queda), mas só UM piloto por vez
- *                é permitido aqui: qualquer outro jogador que tentar montar junto é ejetado
- *                na hora — o risco de o piloto desmontar no meio do voo e derrubar um
- *                passageiro "de carona" sem controle nenhum não vale a pena.
+ *   piloted    → um jogador pilota de verdade, voo estilo criativo (ver nota de controles),
+ *                com dois poderes de ataque (ver nota de ataque). O assento nativo tem
+ *                30 vagas (reaproveitado da entidade da queda), mas só UM piloto por vez é
+ *                permitido aqui: qualquer outro jogador que tentar montar junto é ejetado na
+ *                hora — o risco de o piloto desmontar no meio do voo e derrubar um passageiro
+ *                "de carona" sem controle nenhum não vale a pena.
  *
- * ## Nota técnica — por que a pilotagem e o ataque são via script
+ * ## Nota técnica — controles de voo (estilo criativo)
  *
- * A Script API do Bedrock não expõe um jeito de interceptar o botão de ataque nativo
- * enquanto o jogador está montado numa entidade passiva (esse clique não gera um evento
- * script utilizável aqui). Por isso:
- *   - Pilotagem: lida a cada tick via `player.getViewDirection()` e aplicada por impulso,
- *     mesma técnica já usada em `dragonDrop.ts` pra mover o dragão pela rota da queda.
- *   - Ataque: em vez de depender do botão de ataque, o piloto recebe um item VANILLA
- *     (`minecraft:blaze_rod`, sem asset novo — não há como gerar textura customizada
- *     neste projeto) na mão secundária, marcado por dynamic property. Usar esse item
- *     (`itemUse`) dispara o `dragon_fireball`. O item anterior da mão secundária é salvo
- *     e devolvido ao desmontar.
+ * Usa `player.inputInfo` (API dedicada da Mojang pra isso — não é gambiarra):
+ *   - `getMovementVector()` dá o WASD (y = frente/trás, x = lado) — vira empuxo horizontal
+ *     na direção que o piloto está olhando (olhar pra baixo + andar pra frente = mergulhar).
+ *   - `getButtonState(Jump/Sneak)` sobe/desce, SEMPRE independente de pra onde o piloto olha.
+ *   - Sem nenhum input, o dragão simplesmente para: como a entidade não tem gravidade
+ *     (`has_gravity: false`), zerar a velocidade já é suficiente pra pairar no lugar.
+ * O sentido exato de `getMovementVector()` (o que conta como "+1") não está 100%
+ * documentado — se o dragão andar ao contrário do esperado num teste real, inverte em
+ * `CONFIG.dragonFlight.pilot.invertForwardInput`/`invertStrafeInput`, não a lógica.
+ *
+ * ## Nota técnica — por que o ataque usa itens em vez do botão de ataque
+ *
+ * A Script API não expõe um jeito de interceptar o botão de ataque nativo enquanto o
+ * jogador está montado numa entidade passiva (`InputButton` só tem `Jump`/`Sneak`, não tem
+ * ataque). Por isso os dois poderes são gatilhados por item (`itemUse`), marcados por
+ * dynamic property, dados nas duas mãos só durante o voo (salva/restaura o que já estava
+ * equipado, sem mexer no resto do inventário):
+ *   - Poder 1 — "Chifre do Dragão" (mão secundária, `minecraft:blaze_rod` renomeado):
+ *     poder normal do dragão, ilimitado, só com um cooldown curto entre disparos.
+ *   - Poder 2 — "Bolas de Fogo" (mão principal, `minecraft:fire_charge` renomeado): carga
+ *     limitada (`maxCharges`, começa em 15), cada uso consome 1 carga, e as cargas
+ *     recarregam sozinhas com o tempo (uma de cada vez, não tudo de uma vez).
+ * Os dois itens são vanilla — não há como gerar textura customizada neste projeto (sem
+ * assets de imagem). Por isso também não há como garantir o "circulozinho de recarga"
+ * nativo em volta do ícone: sem um item PRÓPRIO com `minecraft:cooldown` declarado (exigiria
+ * um item novo, textura e arquivos de resource pack — fora do escopo agora), o selo nativo
+ * é só melhor esforço; o contador confiável é o texto na action bar (`N/15`).
  */
 import {
+  ButtonState,
   Dimension,
   Entity,
   EquipmentSlot,
+  InputButton,
   ItemStack,
   ItemUseAfterEvent,
   Player,
@@ -50,7 +69,8 @@ import { centerOfRemaining, randomPointInRemaining } from "./zone";
 
 type Phase = "idle" | "resting" | "targeting" | "cruising" | "landed" | "piloted";
 
-const FIREBALL_ITEM_FLAG = "br:dragonHorn";
+const POWER1_FLAG = "br:dragonHornPower1";
+const POWER2_FLAG = "br:dragonHornPower2";
 
 interface FlightState {
   phase: Phase;
@@ -68,10 +88,22 @@ interface FlightState {
 
 const state: FlightState = { phase: "idle", tick: 0, stayTicks: 0 };
 
-/** Item da mão secundária salvo por jogador, pra devolver ao desmontar. */
+interface ChargeState {
+  count: number;
+  /** `system.currentTick` em que a próxima carga fica pronta (só relevante se count < max). */
+  nextRegenTick: number;
+}
+
+/** Item da mão secundária (Poder 1) salvo por jogador, pra devolver ao desmontar. */
 const savedOffhand = new Map<string, ItemStack | undefined>();
-/** Último `system.currentTick` (relógio absoluto, não o `state.tick` local) em que cada jogador disparou. */
+/** Item que estava no slot 0 da hotbar (Poder 2) antes de montar, pra devolver ao desmontar. */
+const savedSlot0Item = new Map<string, ItemStack | undefined>();
+/** Slot da hotbar que o jogador tinha selecionado antes de montar, pra devolver ao desmontar. */
+const savedSelectedSlot = new Map<string, number>();
+/** Último `system.currentTick` em que cada jogador disparou o Poder 1 (cooldown simples). */
 const lastFireTick = new Map<string, number>();
+/** Cargas do Poder 2 por jogador. */
+const fireballCharges = new Map<string, ChargeState>();
 
 // ---------------------------------------------------------------------------
 // API pública
@@ -143,7 +175,7 @@ function resetToIdle(reason: string): void {
   if (state.intervalId !== undefined) system.clearRun(state.intervalId);
   state.intervalId = undefined;
   if (state.pilotId) {
-    restoreOffhand(state.pilotId);
+    restoreAbilities(state.pilotId);
     state.pilotId = undefined;
   }
   state.phase = "idle";
@@ -343,8 +375,14 @@ function beginPiloting(pilot: Player): void {
   state.phase = "piloted";
   state.pilotId = pilot.id;
   state.tick = 0;
-  equipFireballHorn(pilot);
-  showTitle(pilot, "§lVOO LIVRE", "Olhe pra onde quer ir • use o Chifre do Dragão pra atacar", 60);
+  equipAbilities(pilot);
+  showTitle(
+    pilot,
+    "§lVOO LIVRE",
+    "Ande pra controlar • pule/agache pra subir/descer • pare pra pairar",
+    60
+  );
+  showChargeStatus(pilot);
   log(`${pilot.name} assumiu o controle do dragão.`);
 }
 
@@ -365,27 +403,54 @@ function tickPiloted(): void {
     if (rider.id !== pilot.id) rideable?.ejectRider(rider);
   }
 
-  const dir = pilot.getViewDirection();
+  const view = pilot.getViewDirection();
+  faceDirection(dragon, view, cfg.maxPitchDeg);
+
+  // Frente/trás e de lado: sempre relativos a pra onde o piloto está olhando (olhar pra
+  // baixo + andar pra frente = mergulhar). Subir/descer: SEMPRE vertical, independente do
+  // olhar — pular sobe, agachar desce, parado paira.
+  const move = pilot.inputInfo.getMovementVector();
+  const forwardInput = clampNum(move.y, -1, 1) * (cfg.invertForwardInput ? -1 : 1);
+  const strafeInput = clampNum(move.x, -1, 1) * (cfg.invertStrafeInput ? -1 : 1);
+  const yawRad = Math.atan2(-view.x, view.z);
+  const right = { x: Math.cos(yawRad), z: Math.sin(yawRad) };
+
+  let vx = view.x * forwardInput + right.x * strafeInput;
+  let vz = view.z * forwardInput + right.z * strafeInput;
+  const horizontalLen = Math.hypot(vx, vz);
+  if (horizontalLen > 1) {
+    vx /= horizontalLen;
+    vz /= horizontalLen;
+  }
+
+  let vy = view.y * forwardInput;
+  const jumping = pilot.inputInfo.getButtonState(InputButton.Jump) === ButtonState.Pressed;
+  const sneaking = pilot.inputInfo.getButtonState(InputButton.Sneak) === ButtonState.Pressed;
+  if (jumping && !sneaking) vy += 1;
+  else if (sneaking && !jumping) vy -= 1;
+  vy = clampNum(vy, -1, 1);
+
   const loc = dragon.location;
-  let vy = dir.y;
   if (loc.y >= cfg.maxY && vy > 0) vy = 0;
   if (loc.y <= cfg.minY && vy < 0) vy = 0;
 
   dragon.clearVelocity();
-  dragon.applyImpulse({
-    x: dir.x * cfg.speedBlocksPerTick,
-    y: vy * cfg.speedBlocksPerTick,
-    z: dir.z * cfg.speedBlocksPerTick,
-  });
-  faceDirection(dragon, dir, cfg.maxPitchDeg);
+  if (vx !== 0 || vy !== 0 || vz !== 0) {
+    dragon.applyImpulse({
+      x: vx * cfg.speedBlocksPerTick,
+      y: vy * cfg.verticalSpeedBlocksPerTick,
+      z: vz * cfg.speedBlocksPerTick,
+    });
+  }
+  // Sem impulso: sem gravidade (has_gravity: false), o dragão só para no ar — paira sozinho.
 
-  if (state.tick % 100 === 0) showActionBar(pilot, "Use o Chifre do Dragão pra atacar");
+  if (state.tick % 100 === 0) showChargeStatus(pilot);
 }
 
 function endPiloting(): void {
   const pilotId = state.pilotId;
   state.pilotId = undefined;
-  if (pilotId) restoreOffhand(pilotId);
+  if (pilotId) restoreAbilities(pilotId);
   // Desce e pousa embaixo de onde estava (mesma lógica de "cruising", alvo = chão local).
   const dragon = state.dragon!;
   const dim = state.dimension!;
@@ -397,54 +462,157 @@ function endPiloting(): void {
 
 world.afterEvents.playerLeave.subscribe((ev) => {
   savedOffhand.delete(ev.playerId);
+  savedSlot0Item.delete(ev.playerId);
+  savedSelectedSlot.delete(ev.playerId);
   lastFireTick.delete(ev.playerId);
+  fireballCharges.delete(ev.playerId);
   if (state.phase === "piloted" && state.pilotId === ev.playerId) endPiloting();
 });
 
 // ---------------------------------------------------------------------------
-// Chifre do Dragão — item vanilla usado como gatilho do ataque (ver nota no topo do arquivo)
+// Itens de ataque — Poder 1 (Chifre) e Poder 2 (Bolas de Fogo) — ver nota no topo do arquivo
 // ---------------------------------------------------------------------------
 
-function equipFireballHorn(pilot: Player): void {
+function equipAbilities(pilot: Player): void {
   const eq = pilot.getComponent("minecraft:equippable");
   if (!eq) return;
-  savedOffhand.set(pilot.id, eq.getEquipment(EquipmentSlot.Offhand));
 
+  // Poder 1 — mão secundária, sempre acessível independente do slot da hotbar selecionado.
+  savedOffhand.set(pilot.id, eq.getEquipment(EquipmentSlot.Offhand));
   const horn = new ItemStack(CONFIG.dragonFlight.fireball.itemTypeId, 1);
   horn.nameTag = CONFIG.dragonFlight.fireball.itemName;
-  horn.setDynamicProperty(FIREBALL_ITEM_FLAG, true);
+  horn.setDynamicProperty(POWER1_FLAG, true);
   eq.setEquipment(EquipmentSlot.Offhand, horn);
+
+  // Poder 2 — mão principal = slot 0 da hotbar, forçado a ficar selecionado ao montar.
+  // "Mainhand" é só um alias pro slot ativo, então guarda o slot original ANTES de trocar,
+  // e guarda o item que já estava no slot 0 DEPOIS de trocar (senão salva/restaura o item
+  // errado — ver comentário em restoreAbilities).
+  savedSelectedSlot.set(pilot.id, pilot.selectedSlotIndex);
+  pilot.selectedSlotIndex = 0;
+  savedSlot0Item.set(pilot.id, eq.getEquipment(EquipmentSlot.Mainhand));
+  const fireCharge = new ItemStack(CONFIG.dragonFlight.fireballCharge.itemTypeId, 1);
+  fireCharge.nameTag = CONFIG.dragonFlight.fireballCharge.itemName;
+  fireCharge.setDynamicProperty(POWER2_FLAG, true);
+  eq.setEquipment(EquipmentSlot.Mainhand, fireCharge);
+
+  fireballCharges.set(pilot.id, {
+    count: CONFIG.dragonFlight.fireballCharge.maxCharges,
+    nextRegenTick: system.currentTick,
+  });
 }
 
-function restoreOffhand(playerId: string): void {
-  const saved = savedOffhand.get(playerId);
+function restoreAbilities(playerId: string): void {
+  const savedOff = savedOffhand.get(playerId);
+  const savedSlot0 = savedSlot0Item.get(playerId);
+  const savedSlot = savedSelectedSlot.get(playerId);
   savedOffhand.delete(playerId);
+  savedSlot0Item.delete(playerId);
+  savedSelectedSlot.delete(playerId);
+  fireballCharges.delete(playerId);
+  lastFireTick.delete(playerId);
+
   const player = world.getAllPlayers().find((p) => p.id === playerId);
   if (!player) return; // saiu do jogo: nada a restaurar
   const eq = player.getComponent("minecraft:equippable");
-  eq?.setEquipment(EquipmentSlot.Offhand, saved);
+  if (!eq) return;
+
+  eq.setEquipment(EquipmentSlot.Offhand, savedOff);
+  // Garante que "Mainhand" aponta pro slot 0 antes de devolver o item — senão o item do
+  // slot 0 vai parar no slot que o jogador tiver selecionado NAQUELE momento (pode ter
+  // trocado de slot durante o voo).
+  player.selectedSlotIndex = 0;
+  eq.setEquipment(EquipmentSlot.Mainhand, savedSlot0);
+  if (savedSlot !== undefined) player.selectedSlotIndex = savedSlot;
 }
+
+function showChargeStatus(pilot: Player): void {
+  const c = getCharges(pilot.id);
+  const max = CONFIG.dragonFlight.fireballCharge.maxCharges;
+  showActionBar(pilot, `§cChifre§r: sopro do dragão   §6Bolas de Fogo§r: ${c.count}/${max}`);
+}
+
+// ---------------------------------------------------------------------------
+// Poder 2 — cargas com recarga individual (nunca busca/loop sem teto: no máximo
+// `maxCharges` iterações por chamada, mesmo depois de muito tempo parado)
+// ---------------------------------------------------------------------------
+
+function getCharges(playerId: string): ChargeState {
+  const cfg = CONFIG.dragonFlight.fireballCharge;
+  let c = fireballCharges.get(playerId);
+  if (!c) {
+    c = { count: cfg.maxCharges, nextRegenTick: system.currentTick };
+    fireballCharges.set(playerId, c);
+  }
+  while (c.count < cfg.maxCharges && system.currentTick >= c.nextRegenTick) {
+    c.count++;
+    c.nextRegenTick += cfg.regenTicks;
+  }
+  return c;
+}
+
+/** Consome uma carga se houver; devolve o estado atualizado ou `undefined` se não tinha. */
+function consumeCharge(playerId: string): ChargeState | undefined {
+  const cfg = CONFIG.dragonFlight.fireballCharge;
+  const c = getCharges(playerId);
+  if (c.count <= 0) return undefined;
+  const wasFull = c.count === cfg.maxCharges;
+  c.count--;
+  if (wasFull) c.nextRegenTick = system.currentTick + cfg.regenTicks;
+  return c;
+}
+
+// ---------------------------------------------------------------------------
+// Disparo
+// ---------------------------------------------------------------------------
 
 function handleItemUse(ev: ItemUseAfterEvent): void {
   if (state.phase !== "piloted" || ev.source.id !== state.pilotId) return;
-  if (ev.itemStack.getDynamicProperty(FIREBALL_ITEM_FLAG) !== true) return;
-
-  const cfg = CONFIG.dragonFlight.fireball;
-  const now = system.currentTick;
-  const last = lastFireTick.get(ev.source.id) ?? -Infinity;
-  if (now - last < cfg.cooldownTicks) return;
-  lastFireTick.set(ev.source.id, now);
-
   const dragon = state.dragon;
-  if (dragon && dragon.isValid) fireDragonFireball(dragon, ev.source);
+  if (!dragon || !dragon.isValid) return;
+
+  if (ev.itemStack.getDynamicProperty(POWER1_FLAG) === true) {
+    firePower1(dragon, ev.source);
+  } else if (ev.itemStack.getDynamicProperty(POWER2_FLAG) === true) {
+    firePower2(dragon, ev.source);
+  }
 }
 
-function fireDragonFireball(dragon: Entity, pilot: Player): void {
+function firePower1(dragon: Entity, pilot: Player): void {
+  const cfg = CONFIG.dragonFlight.fireball;
+  const now = system.currentTick;
+  const last = lastFireTick.get(pilot.id) ?? -Infinity;
+  if (now - last < cfg.cooldownTicks) return;
+  lastFireTick.set(pilot.id, now);
+  fireDragonFireball(dragon, pilot, cfg.speed);
+}
+
+function firePower2(dragon: Entity, pilot: Player): void {
+  const cfg = CONFIG.dragonFlight.fireballCharge;
+  const c = consumeCharge(pilot.id);
+  if (!c) {
+    showActionBar(pilot, "§7Sem cargas de Bolas de Fogo — recarregando...");
+    return;
+  }
+  fireDragonFireball(dragon, pilot, cfg.speed);
+  showChargeStatus(pilot);
+  if (c.count === 0) {
+    // Melhor esforço: tenta o selo de recarga nativo. Sem um item PRÓPRIO com
+    // minecraft:cooldown declarado (item vanilla reaproveitado), pode não aparecer — o
+    // contador na action bar acima é a fonte confiável.
+    try {
+      pilot.startItemCooldown("br:fireball_charge", Math.max(1, c.nextRegenTick - system.currentTick));
+    } catch {
+      /* melhor esforço, ignora falha */
+    }
+  }
+}
+
+function fireDragonFireball(dragon: Entity, pilot: Player, speed: number): void {
   const dim = state.dimension ?? dragon.dimension;
   const dir = pilot.getViewDirection();
   const loc = dragon.location;
   const spawnPos = { x: loc.x + dir.x * 2, y: loc.y + 1.5, z: loc.z + dir.z * 2 };
-  const speed = CONFIG.dragonFlight.fireball.speed;
 
   try {
     const fireball = dim.spawnEntity("minecraft:dragon_fireball", spawnPos);
@@ -458,7 +626,6 @@ function fireDragonFireball(dragon: Entity, pilot: Player): void {
       warn("dragon_fireball sem minecraft:projectile — usando impulso como fallback.");
       fireball.applyImpulse(velocity);
     }
-    showActionBar(pilot, "§cFogo!");
   } catch (e) {
     warn("Falha ao disparar dragon_fireball:", e);
   }

@@ -3,7 +3,11 @@
  * Cada sistema é iniciado separadamente e pode ser testado isolado via /scriptevent.
  *
  * Comandos de teste (operador, no console do BDS ou no jogo):
+ *   /scriptevent br:lobby_start     → espera jogadores (fase de teste, §3) e inicia a queda
+ *                                      sozinho quando o tempo acabar — fluxo recomendado
+ *   /scriptevent br:lobby_stop      → cancela a espera do lobby
  *   /scriptevent br:drop            → inicia a queda do dragão com todos os jogadores online
+ *                                      direto, sem passar pelo lobby (teste rápido)
  *   /scriptevent br:drop_stop       → encerra a queda (ejeta quem estiver montado)
  *   /scriptevent br:make_floating   → preparação do mapa (§1), roda UMA VEZ, remove tudo
  *                                      abaixo de CONFIG.map.floorY
@@ -17,6 +21,7 @@ import { system, world } from "@minecraft/server";
 import { startDragonDrop, stopDragonDrop } from "./systems/dragonDrop";
 import { spawnFlightTestDragon, startDragonFlightSystem, stopDragonFlight } from "./systems/dragonFlight";
 import { startFloatingIsland } from "./systems/floatingIsland";
+import { startLobbyWait, stopLobbyWait } from "./systems/lobby";
 import { startNetherBlock } from "./systems/netherBlock";
 import { startZoneCollapse, stopZoneCollapse } from "./systems/zone";
 import { log } from "./util/log";
@@ -29,6 +34,12 @@ world.afterEvents.worldLoad.subscribe(() => {
 
 system.afterEvents.scriptEventReceive.subscribe((ev) => {
   switch (ev.id) {
+    case "br:lobby_start":
+      startLobbyWait();
+      break;
+    case "br:lobby_stop":
+      stopLobbyWait("comando");
+      break;
     case "br:drop":
       startDragonDrop(world.getAllPlayers());
       break;

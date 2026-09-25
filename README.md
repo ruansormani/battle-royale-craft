@@ -62,7 +62,9 @@ Como operador (no jogo ou no console do BDS):
 
 | Comando | O que faz |
 |---|---|
-| `/scriptevent br:drop` | Inicia a queda do dragão com todos os jogadores online |
+| `/scriptevent br:lobby_start` | Espera jogadores (fase de teste) e inicia a queda sozinho quando o tempo acabar |
+| `/scriptevent br:lobby_stop` | Cancela a espera do lobby |
+| `/scriptevent br:drop` | Inicia a queda do dragão com todos os jogadores online (direto, sem lobby) |
 | `/scriptevent br:drop_stop` | Encerra a queda e ejeta quem estiver montado |
 | `/scriptevent br:make_floating` | **Preparação do mapa, roda uma vez só.** Remove tudo abaixo de `CONFIG.map.floorY` |
 | `/scriptevent br:zone_start` | Inicia o desmoronamento por fases (zona segura → zona de desmoronamento) |
@@ -72,6 +74,13 @@ Como operador (no jogo ou no console do BDS):
 
 Na queda: agache pra pular do dragão e, no ar, aperte pular pra abrir a asa.
 Quem não pular até o fim da rota é ejetado à força.
+
+**Lobby (fase de teste)**: `br:lobby_start` mostra "aguardando jogadores" na tela pra quem
+estiver online, atualizando a cada segundo, e depois de `CONFIG.lobby.testWaitTicks` chama
+`br:drop` sozinho com quem estiver no servidor (ou antes, se bater
+`CONFIG.lobby.testMaxPlayers`). Sem isso, como a fase de teste não tem jogadores suficientes
+pra bater um número máximo de verdade, a partida nunca começaria sozinha. Versão de produção
+(área fixa fora do mapa, placar) é outro item do roadmap.
 
 **Nether**: entrar no Nether por qualquer meio devolve o jogador ao Overworld na hora (sempre ativo).
 
@@ -97,17 +106,32 @@ dragão é assumido pelo sistema `dragonFlight.ts` automaticamente:
    qualquer outro que tentar montar junto é ejetado na hora (evita alguém cair sem controle se
    o piloto desmontar no meio do voo). Se ninguém montar depois de um tempo, decola de novo
    pro próximo ponto.
-4. Pilotando: a direção que o jogador olha é a direção do voo (livre em 3D, sem cair);
-   `minecraft:blaze_rod` renomeado ("Chifre do Dragão") na mão secundária é o gatilho do
-   ataque — usar o item dispara um `dragon_fireball` na direção que o piloto está olhando.
-   O item anterior da mão secundária é salvo e devolvido ao desmontar.
-5. Desmontou no meio do ar? O dragão desce e pousa embaixo de onde estava, e o ciclo continua.
+4. Pilotando — **voo estilo criativo**: anda (WASD) na direção que o piloto está olhando
+   (olhar pra baixo + andar pra frente = mergulhar); Pular sobe e Agachar desce, **sempre**
+   independente de pra onde o piloto olha; sem nenhum input, o dragão simplesmente para no
+   ar (paira, não cai). Usa `player.inputInfo` — API real da Mojang pra dar controle de
+   verdade a um jogador montado (não é gambiarra).
+5. Dois poderes de ataque, um em cada mão:
+   - **Poder 1 — "Chifre do Dragão"** (mão secundária, `minecraft:blaze_rod` renomeado):
+     ataque normal do dragão, ilimitado, só com um cooldown curto entre disparos.
+   - **Poder 2 — "Bolas de Fogo"** (mão principal, `minecraft:fire_charge` renomeado): carga
+     limitada (`CONFIG.dragonFlight.fireballCharge.maxCharges`, começa em 15). Cada uso
+     consome 1 carga; as cargas recarregam sozinhas com o tempo, uma de cada vez
+     (`regenTicks` por carga) — não o estoque inteiro de uma vez. O contador atual
+     (`N/15`) aparece na action bar.
+   Os itens anteriores das duas mãos são salvos e devolvidos ao desmontar.
+6. Desmontou no meio do ar? O dragão desce e pousa embaixo de onde estava, e o ciclo continua.
 
-> **Por que um item vanilla pro ataque, e não o botão de ataque nativo?** A Script API não
+> **Por que item vanilla pro ataque, e não o botão de ataque nativo?** A Script API não
 > expõe um jeito de interceptar o clique de ataque enquanto o jogador está montado numa
-> entidade passiva. E não há como gerar uma textura customizada neste projeto (sem assets de
-> imagem), então o gatilho é um item vanilla existente reaproveitado, sem tocar no resto do
-> inventário do jogador. Ver o comentário no topo de `src/systems/dragonFlight.ts`.
+> entidade passiva (`InputButton` só tem `Jump`/`Sneak`). E não há como gerar uma textura
+> customizada neste projeto (sem assets de imagem), então os gatilhos são itens vanilla
+> reaproveitados, sem tocar no resto do inventário do jogador. Isso também significa que
+> **não dá pra garantir o "círculo de recarga" nativo em volta do ícone do item** pro Poder 2
+> — sem um item PRÓPRIO com `minecraft:cooldown` declarado (exigiria item novo + textura +
+> arquivos de resource pack, fora do escopo agora), o selo nativo é só melhor esforço; o
+> contador confiável é o texto `N/15` na action bar. Ver o comentário no topo de
+> `src/systems/dragonFlight.ts`.
 
 ## Pontos a validar em jogo (marcados no código)
 
@@ -120,6 +144,12 @@ dragão é assumido pelo sistema `dragonFlight.ts` automaticamente:
 - Pilotagem livre e ataque do sobrevoo (`dragonFlight.ts`) são implementados via script (ver
   seção acima) — testar sensação de voo e o disparo do `dragon_fireball` em jogo antes de
   fechar como definitivo.
+- O sentido de `player.inputInfo.getMovementVector()` (o que é "+1" no eixo frente/trás e no
+  de lado) não está 100% documentado — se o dragão andar ao contrário do esperado, inverte em
+  `CONFIG.dragonFlight.pilot.invertForwardInput`/`invertStrafeInput`.
+- `pilot.startItemCooldown()` pro selo de recarga do Poder 2 é melhor esforço (ver nota acima)
+  — confirmar em jogo se aparece ou não; o contador na action bar é a fonte confiável de
+  qualquer forma.
 
 ## Áudio por proximidade (não implementado, de propósito)
 

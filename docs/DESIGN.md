@@ -16,7 +16,12 @@ Registro das decisões da sessão de planejamento. **Não reabrir**; itens "em a
 - BDS próprio (mesma infra do Genesis), `max-players` no server.properties. 30 jogadores por partida.
 
 ## 3. Lobby
-- Teste: fluxo simplificado (poucos amigos + bots).
+- **Teste (revisado)**: precisa de um tempo fixo de espera mesmo — sem isso, como não tem
+  jogadores suficientes pra bater um número máximo, a partida nunca começaria sozinha.
+  Versão simples: espera `testWaitTicks`, mostra "aguardando jogadores" na tela, e começa a
+  queda com quem estiver online (mínimo `testMinPlayers`) quando o tempo acabar OU quando
+  bater `testMaxPlayers` antes disso. Sem área fixa fora do mapa, sem placar de verdade ainda
+  — isso é da fase 2.
 - Fase 2: área fixa fora do mapa, sem item/combate, placar de espera; início por (máximo de jogadores) OU (tempo máximo com mínimo aceitável). Contagem na TELA. Saída durante a contagem só ajusta o placar. Fim de partida volta todos ao lobby.
 
 ## 4. Queda inicial — dragão
@@ -24,9 +29,16 @@ Registro das decisões da sessão de planejamento. **Não reabrir**; itens "em a
 - Dragão nasce no início, voa em linha reta, altura fixa, atravessa o mapa. Jogadores começam montados (montaria nativa). Cada um escolhe quando descer; asa abre e plana. Quem não pular é forçado a descer. SEM Queda Lenta.
 - Sobrevoo depois de alguns minutos:
   - Sem ninguém montado: sorteia ponto dentro da área que ainda existe (mesmo dado do desmoronamento), voa suave, pousa, repete. Tentativas limitadas; depois usa o centro exato do que sobrou.
-  - Pousado: jogador pode montar (base do pescoço, logo depois das asas).
-  - Montado: pilotagem livre 3D pra onde o jogador olha (mesmos componentes do Happy Ghast).
-  - Ataque: `dragon_fireball` nativo.
+  - Pousado: jogador pode montar (base do pescoço, logo depois das asas). Só um piloto por vez.
+  - **Montado — pilotagem estilo criativo (revisado)**: via `player.inputInfo` (API real da
+    Mojang pra mount steering, não componente nativo declarativo). WASD = anda na direção que
+    o piloto olha (olhar pra baixo + andar = mergulhar); Pular/Agachar = sobe/desce, sempre
+    independente de pra onde olha; sem nenhum input, o dragão paira no lugar (não cai).
+  - **Ataque — dois poderes (revisado)**: Poder 1 "Chifre do Dragão" (mão secundária) =
+    ataque normal, `dragon_fireball`, ilimitado, só cooldown curto. Poder 2 "Bolas de Fogo"
+    (mão principal) = mesmo `dragon_fireball`, carga limitada (começa em 15), cada uso
+    consome 1 carga, cargas recarregam uma de cada vez com o tempo. Os dois via item vanilla
+    + `itemUse` (Script API não intercepta o botão de ataque nativo com o jogador montado).
   - Vida reduzida.
 
 ## 5. Zona / desmoronamento

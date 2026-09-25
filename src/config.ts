@@ -69,6 +69,20 @@ export const CONFIG = {
     maxColumnsPerTick: 24,
   },
 
+  lobby: {
+    /**
+     * Fase de teste (§3): sem placar/matchmaking de verdade ainda — só um tempo fixo de
+     * espera, porque em teste não tem gente suficiente pra bater um número máximo de
+     * jogadores. Versão de produção (área fixa fora do mapa, duas condições de início)
+     * fica pra depois — ver docs/DESIGN.md §3.
+     */
+    testWaitTicks: 20 * 30,
+    /** Mínimo online pro tempo acabar e a partida realmente começar (senão só cancela). */
+    testMinPlayers: 1,
+    /** Bateu esse número antes do tempo acabar, começa na hora. */
+    testMaxPlayers: 30,
+  },
+
   dragonFlight: {
     /** Mesma entidade da queda inicial (§4) — reaproveitada aqui, como o roadmap prevê. */
     entityId: "br:dragon",
@@ -83,29 +97,51 @@ export const CONFIG = {
     landStayTicksMax: 20 * 60,
 
     pilot: {
-      /** Velocidade do voo livre pilotado (blocos/tick). */
+      /** Velocidade horizontal do voo livre pilotado (blocos/tick), controlada pelo WASD. */
       speedBlocksPerTick: 1.6,
-      /** Inclinação máxima de subida/descida, pra não ficar estranho visualmente. */
+      /** Velocidade de subida/descida (blocos/tick), controlada por Pular/Agachar. */
+      verticalSpeedBlocksPerTick: 1.2,
+      /** Inclinação máxima de subida/descida do corpo do dragão (visual, não afeta o voo). */
       maxPitchDeg: 45,
       /** Limites de altura durante o voo livre — placeholders, ajustar após medir o mapa. */
       minY: 40,
       maxY: 280,
+      /**
+       * `player.inputInfo.getMovementVector()` é recente e o sentido exato de "+1" não está
+       * 100% documentado — se o dragão andar ao contrário do esperado num teste real, inverte
+       * aqui em vez de mexer na lógica de voo.
+       */
+      invertForwardInput: false,
+      invertStrafeInput: false,
     },
 
+    /**
+     * Poder 1 — "Chifre do Dragão": ataque normal do dragão, ilimitado, só com cooldown
+     * curto entre disparos. Item vanilla dado na mão secundária (ver nota em dragonFlight.ts
+     * sobre por que o ataque usa itens em vez do botão de ataque nativo).
+     */
     fireball: {
-      /**
-       * Gatilho do ataque: item VANILLA (sem asset novo — não há como gerar textura
-       * customizada neste projeto) dado na mão secundária do piloto (salva/restaura o que
-       * já estava lá). `itemUse` nesse item específico (marcado por dynamic property)
-       * dispara o `dragon_fireball`. Não dá pra interceptar o botão de ataque nativo
-       * enquanto o jogador está montado numa entidade passiva — ver nota em dragonFlight.ts.
-       */
       itemTypeId: "minecraft:blaze_rod",
       itemName: "§cChifre do Dragão",
       /** Velocidade de disparo do dragon_fireball. */
       speed: 1.6,
       /** Intervalo mínimo entre disparos do mesmo piloto. */
       cooldownTicks: 20 * 3,
+    },
+
+    /**
+     * Poder 2 — "Bolas de Fogo": carga limitada, recarrega uma de cada vez com o tempo.
+     * Item vanilla dado na mão principal (força o slot 0 da hotbar enquanto pilota).
+     */
+    fireballCharge: {
+      itemTypeId: "minecraft:fire_charge",
+      itemName: "§6Bolas de Fogo",
+      /** Cargas máximas — ponto de partida pra ajustar jogando. */
+      maxCharges: 15,
+      /** Tempo (ticks) pra recarregar UMA carga (não o estoque inteiro de uma vez). */
+      regenTicks: 20 * 8,
+      /** Velocidade de disparo do dragon_fireball. */
+      speed: 1.6,
     },
   },
 } as const;
