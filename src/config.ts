@@ -116,6 +116,16 @@ export const CONFIG = {
     },
 
     /**
+     * De onde os dois poderes saem: da BOCA do dragão, não da mão do piloto — offset a
+     * partir de `dragon.location` (base/pés), na direção que o dragão está olhando.
+     * Placeholders — ajustar em jogo olhando o modelo real (geometria do Ender Dragon).
+     */
+    mouth: {
+      forwardOffset: 3.5,
+      upOffset: 2.2,
+    },
+
+    /**
      * Poder 1 — "Chifre do Dragão": ataque normal do dragão, ilimitado, só com cooldown
      * curto entre disparos. Item vanilla dado na mão secundária (ver nota em dragonFlight.ts
      * sobre por que o ataque usa itens em vez do botão de ataque nativo).

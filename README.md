@@ -106,12 +106,19 @@ dragão é assumido pelo sistema `dragonFlight.ts` automaticamente:
    qualquer outro que tentar montar junto é ejetado na hora (evita alguém cair sem controle se
    o piloto desmontar no meio do voo). Se ninguém montar depois de um tempo, decola de novo
    pro próximo ponto.
-4. Pilotando — **voo estilo criativo**: anda (WASD) na direção que o piloto está olhando
+4. Montou = **câmera trava em terceira pessoa** (`minecraft:third_person`, preset nativo do
+   F5, de cima e um pouco atrás), não importa a preferência que o jogador já tinha.
+   Desmontou = volta pra preferência de primeira/terceira pessoa de antes (não força
+   primeira pessoa — só devolve o controle da câmera, `camera.clear()`).
+5. Pilotando — **voo estilo criativo**: anda (WASD) na direção que o piloto está olhando
    (olhar pra baixo + andar pra frente = mergulhar); Pular sobe e Agachar desce, **sempre**
    independente de pra onde o piloto olha; sem nenhum input, o dragão simplesmente para no
    ar (paira, não cai). Usa `player.inputInfo` — API real da Mojang pra dar controle de
    verdade a um jogador montado (não é gambiarra).
-5. Dois poderes de ataque, um em cada mão:
+6. Dois poderes de ataque, um em cada mão — mas o ataque em si é do **dragão**: sai da BOCA
+   dele (offset a partir do corpo, na direção que ele está olhando —
+   `CONFIG.dragonFlight.mouth`), não da mão nem da mira do piloto. O item na mão é só o
+   gatilho:
    - **Poder 1 — "Chifre do Dragão"** (mão secundária, `minecraft:blaze_rod` renomeado):
      ataque normal do dragão, ilimitado, só com um cooldown curto entre disparos.
    - **Poder 2 — "Bolas de Fogo"** (mão principal, `minecraft:fire_charge` renomeado): carga
@@ -120,7 +127,7 @@ dragão é assumido pelo sistema `dragonFlight.ts` automaticamente:
      (`regenTicks` por carga) — não o estoque inteiro de uma vez. O contador atual
      (`N/15`) aparece na action bar.
    Os itens anteriores das duas mãos são salvos e devolvidos ao desmontar.
-6. Desmontou no meio do ar? O dragão desce e pousa embaixo de onde estava, e o ciclo continua.
+7. Desmontou no meio do ar? O dragão desce e pousa embaixo de onde estava, e o ciclo continua.
 
 > **Por que item vanilla pro ataque, e não o botão de ataque nativo?** A Script API não
 > expõe um jeito de interceptar o clique de ataque enquanto o jogador está montado numa
@@ -147,6 +154,12 @@ dragão é assumido pelo sistema `dragonFlight.ts` automaticamente:
 - O sentido de `player.inputInfo.getMovementVector()` (o que é "+1" no eixo frente/trás e no
   de lado) não está 100% documentado — se o dragão andar ao contrário do esperado, inverte em
   `CONFIG.dragonFlight.pilot.invertForwardInput`/`invertStrafeInput`.
+- `CONFIG.dragonFlight.mouth.forwardOffset`/`upOffset` (de onde as bolas de fogo saem, em
+  relação ao corpo do dragão) são placeholders — ajustar olhando o modelo real em jogo até a
+  bola de fogo sair visualmente da boca, não do meio do corpo.
+- `minecraft:third_person` via `pilot.camera.setCamera()` trava a câmera ao montar — confirmar
+  em jogo se segura mesmo contra o jogador tentando apertar F5, e se `camera.clear()` devolve
+  a preferência certa ao desmontar.
 - `pilot.startItemCooldown()` pro selo de recarga do Poder 2 é melhor esforço (ver nota acima)
   — confirmar em jogo se aparece ou não; o contador na action bar é a fonte confiável de
   qualquer forma.

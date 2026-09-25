@@ -36,7 +36,9 @@
  * jogador está montado numa entidade passiva (`InputButton` só tem `Jump`/`Sneak`, não tem
  * ataque). Por isso os dois poderes são gatilhados por item (`itemUse`), marcados por
  * dynamic property, dados nas duas mãos só durante o voo (salva/restaura o que já estava
- * equipado, sem mexer no resto do inventário):
+ * equipado, sem mexer no resto do inventário) — o item é só o GATILHO, o ataque em si é do
+ * dragão: sai da BOCA dele (`dragonFacingDirection` + `CONFIG.dragonFlight.mouth`, não da
+ * mão nem da mira do piloto — ver `fireDragonFireball`):
  *   - Poder 1 — "Chifre do Dragão" (mão secundária, `minecraft:blaze_rod` renomeado):
  *     poder normal do dragão, ilimitado, só com um cooldown curto entre disparos.
  *   - Poder 2 — "Bolas de Fogo" (mão principal, `minecraft:fire_charge` renomeado): carga
@@ -47,6 +49,13 @@
  * nativo em volta do ícone: sem um item PRÓPRIO com `minecraft:cooldown` declarado (exigiria
  * um item novo, textura e arquivos de resource pack — fora do escopo agora), o selo nativo
  * é só melhor esforço; o contador confiável é o texto na action bar (`N/15`).
+ *
+ * ## Nota técnica — câmera em terceira pessoa
+ *
+ * Montou = câmera trava em `minecraft:third_person` (preset nativo do jogo, o mesmo do F5 —
+ * de cima e um pouco atrás), não importa a preferência que o jogador já tinha. Desmontou =
+ * `camera.clear()` devolve o controle pra preferência de primeira/terceira pessoa de quem
+ * o jogador já estava usando antes (não força primeira pessoa de volta).
  */
 import {
   ButtonState,
@@ -376,6 +385,13 @@ function beginPiloting(pilot: Player): void {
   state.pilotId = pilot.id;
   state.tick = 0;
   equipAbilities(pilot);
+  // Terceira pessoa fixa, de cima e um pouco de trás — mesmo preset nativo do F5, forçado
+  // por script pra não depender da preferência de câmera que o jogador já tinha.
+  try {
+    pilot.camera.setCamera("minecraft:third_person");
+  } catch (e) {
+    warn("Falha ao forçar câmera em terceira pessoa:", e);
+  }
   showTitle(
     pilot,
     "§lVOO LIVRE",
@@ -514,6 +530,15 @@ function restoreAbilities(playerId: string): void {
 
   const player = world.getAllPlayers().find((p) => p.id === playerId);
   if (!player) return; // saiu do jogo: nada a restaurar
+
+  // Devolve a câmera pra preferência de primeira/terceira pessoa que o jogador já tinha
+  // antes de montar (não força primeira pessoa — respeita quem já jogava em terceira).
+  try {
+    player.camera.clear();
+  } catch (e) {
+    warn("Falha ao devolver a câmera:", e);
+  }
+
   const eq = player.getComponent("minecraft:equippable");
   if (!eq) return;
 
@@ -608,11 +633,34 @@ function firePower2(dragon: Entity, pilot: Player): void {
   }
 }
 
+/**
+ * Vetor unitário pra onde o dragão está olhando, a partir da própria rotação dele (não da
+ * mira do jogador) — é o dragão quem ataca, não o piloto. Inverso exato da conta usada em
+ * `faceDirection` (mesma convenção de yaw/pitch do Minecraft).
+ */
+function dragonFacingDirection(dragon: Entity): Vector3 {
+  const rot = dragon.getRotation();
+  const yawRad = (rot.y * Math.PI) / 180;
+  const pitchRad = (rot.x * Math.PI) / 180;
+  return {
+    x: -Math.sin(yawRad) * Math.cos(pitchRad),
+    y: -Math.sin(pitchRad),
+    z: Math.cos(yawRad) * Math.cos(pitchRad),
+  };
+}
+
 function fireDragonFireball(dragon: Entity, pilot: Player, speed: number): void {
   const dim = state.dimension ?? dragon.dimension;
-  const dir = pilot.getViewDirection();
+  const dir = dragonFacingDirection(dragon);
   const loc = dragon.location;
-  const spawnPos = { x: loc.x + dir.x * 2, y: loc.y + 1.5, z: loc.z + dir.z * 2 };
+  const { forwardOffset, upOffset } = CONFIG.dragonFlight.mouth;
+  // Sai da boca do dragão (offset a partir do corpo, na direção que ele olha), não da mão
+  // do piloto — os dois poderes são ataques do próprio dragão.
+  const spawnPos = {
+    x: loc.x + dir.x * forwardOffset,
+    y: loc.y + upOffset + dir.y * forwardOffset,
+    z: loc.z + dir.z * forwardOffset,
+  };
 
   try {
     const fireball = dim.spawnEntity("minecraft:dragon_fireball", spawnPos);
