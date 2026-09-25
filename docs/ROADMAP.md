@@ -10,6 +10,8 @@ Ordem de implementação. Cada sistema fica em `src/systems/` e é testável iso
 - [x] §4 Sobrevoo pós-queda + pilotagem estilo criativo + Poder 1/Poder 2 de ataque
       (`dragonFlight.ts`) — **validar em jogo**
 - [x] §3 Lobby, versão simples de teste (`lobby.ts`) — **validar em jogo**
+- [x] Cadeia automática de partida: lobby → queda → (fim da queda) dragão autônomo E zona
+      começam sozinhos, sem comando manual — **validar em jogo**
 - [ ] §7 Times: chat por `targets`, fogo amigo desfeito por script, menu `ActionFormData` por item
 - [ ] §12 Caído → revive, tag de reviver, Token da Imortalidade, espectador do próprio time
 - [ ] §11 Loot tables, crafting do isqueiro, trocas de aldeão por vila, casas via `structureManager.place()`

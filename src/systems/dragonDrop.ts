@@ -52,11 +52,11 @@ interface DropState {
 
 const state: DropState = { phase: "idle", tick: 0, aboard: new Set(), fallbackRiders: new Set() };
 
-/** Callback opcional pro próximo sistema (sobrevoo) assumir o dragão. */
-let onFinished: ((dragon: Entity | undefined) => void) | undefined;
+/** Callbacks pros próximos sistemas reagirem ao fim da queda (sobrevoo do dragão, zona...). */
+const onFinishedListeners: ((dragon: Entity | undefined) => void)[] = [];
 
 export function onDragonDropFinished(cb: (dragon: Entity | undefined) => void): void {
-  onFinished = cb;
+  onFinishedListeners.push(cb);
 }
 
 export function isDropActive(): boolean {
@@ -143,10 +143,11 @@ export function stopDragonDrop(reason = "stop"): void {
   state.fallbackRiders.clear();
   state.dragon = undefined;
 
-  if (onFinished) {
-    onFinished(dragon?.isValid ? dragon : undefined);
+  if (onFinishedListeners.length > 0) {
+    const validDragon = dragon?.isValid ? dragon : undefined;
+    for (const cb of onFinishedListeners) cb(validDragon);
   } else if (dragon?.isValid) {
-    // Sem sistema de sobrevoo registrado ainda: remove o dragão.
+    // Ninguém registrado pra assumir o dragão: remove.
     dragon.remove();
   }
 }

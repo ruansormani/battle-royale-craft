@@ -88,12 +88,14 @@ pra bater um número máximo de verdade, a partida nunca começaria sozinha. Ver
 (ajuste `CONFIG.map.floorY` antes). É uma limpeza definitiva, em lotes de colunas por tick —
 pode demorar alguns minutos pro mapa inteiro (2000×2000), sem travar o servidor.
 
-**Desmoronamento**: `br:zone_start` sorteia um novo centro/raio menor a cada fase (sempre
-contido na área anterior), avisa "zona segura" com contagem, depois remove os blocos que
-ficaram de fora em lotes ("zona de desmoronamento"), pausa, e repete até o raio mínimo
-(`CONFIG.zone.minRadius`). A área restante fica disponível para outros sistemas via
-`getRemainingArea()` / `randomPointInRemaining()` em `src/systems/zone.ts` — é o dado que o
-sobrevoo do dragão (próximo item do roadmap) vai reaproveitar.
+**Desmoronamento**: começa **sozinho** assim que a queda do dragão termina (não precisa de
+comando manual — `br:zone_start` continua disponível pra testar isolado). Sorteia um novo
+centro/raio menor a cada fase (sempre contido na área anterior), avisa "zona segura" com
+contagem, depois remove os blocos que ficaram de fora em lotes ("zona de desmoronamento"),
+pausa, e repete até o raio mínimo (`CONFIG.zone.minRadius`). A área restante fica disponível
+para outros sistemas via `getRemainingArea()` / `randomPointInRemaining()` em
+`src/systems/zone.ts` — é o dado que o sobrevoo do dragão reaproveita pra escolher pontos de
+pouso (ver abaixo).
 
 **Sobrevoo pós-queda**: depois que a queda termina (`br:drop_stop` ou fim da rota), o mesmo
 dragão é assumido pelo sistema `dragonFlight.ts` automaticamente:

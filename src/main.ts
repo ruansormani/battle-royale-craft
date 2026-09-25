@@ -11,14 +11,18 @@
  *   /scriptevent br:drop_stop       → encerra a queda (ejeta quem estiver montado)
  *   /scriptevent br:make_floating   → preparação do mapa (§1), roda UMA VEZ, remove tudo
  *                                      abaixo de CONFIG.map.floorY
- *   /scriptevent br:zone_start      → inicia o desmoronamento por fases (§5)
+ *   /scriptevent br:zone_start      → inicia o desmoronamento por fases na mão (§5) — normalmente
+ *                                      não precisa: já começa sozinho quando a queda termina
  *   /scriptevent br:zone_stop       → encerra o desmoronamento (não desfaz o que já sumiu)
  *   /scriptevent br:flight_spawn    → cria um dragão de teste já na fase de pouso (§4,
  *                                      sobrevoo — pula o descanso inicial, só pra testar)
  *   /scriptevent br:flight_stop     → encerra o sobrevoo e ejeta quem estiver montado
+ *
+ * Cadeia automática de uma partida: br:lobby_start → (tempo acaba) → queda do dragão →
+ * (queda termina) → dragão vira autônomo/pilotável E a zona começa a encolher sozinha.
  */
 import { system, world } from "@minecraft/server";
-import { startDragonDrop, stopDragonDrop } from "./systems/dragonDrop";
+import { onDragonDropFinished, startDragonDrop, stopDragonDrop } from "./systems/dragonDrop";
 import { spawnFlightTestDragon, startDragonFlightSystem, stopDragonFlight } from "./systems/dragonFlight";
 import { startFloatingIsland } from "./systems/floatingIsland";
 import { startLobbyWait, stopLobbyWait } from "./systems/lobby";
@@ -29,6 +33,10 @@ import { log } from "./util/log";
 world.afterEvents.worldLoad.subscribe(() => {
   startNetherBlock();
   startDragonFlightSystem();
+  // Fim da queda inicial = gatilho pra zona começar a encolher sozinha (§5). O próprio
+  // zone.ts já dá um tempo de aviso ("zona segura") antes de remover qualquer bloco, então
+  // não precisa de atraso extra aqui.
+  onDragonDropFinished(() => startZoneCollapse());
   log("Addon Battle Royale carregado.");
 });
 
