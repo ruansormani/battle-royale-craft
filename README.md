@@ -64,11 +64,25 @@ Como operador (no jogo ou no console do BDS):
 |---|---|
 | `/scriptevent br:drop` | Inicia a queda do dragão com todos os jogadores online |
 | `/scriptevent br:drop_stop` | Encerra a queda e ejeta quem estiver montado |
+| `/scriptevent br:make_floating` | **Preparação do mapa, roda uma vez só.** Remove tudo abaixo de `CONFIG.map.floorY` |
+| `/scriptevent br:zone_start` | Inicia o desmoronamento por fases (zona segura → zona de desmoronamento) |
+| `/scriptevent br:zone_stop` | Encerra o desmoronamento (não desfaz blocos já removidos) |
 
 Na queda: agache pra pular do dragão e, no ar, aperte pular pra abrir a asa.
 Quem não pular até o fim da rota é ejetado à força.
 
 **Nether**: entrar no Nether por qualquer meio devolve o jogador ao Overworld na hora (sempre ativo).
+
+**Ilha flutuante**: rode `br:make_floating` uma única vez, depois de importar e medir o mapa
+(ajuste `CONFIG.map.floorY` antes). É uma limpeza definitiva, em lotes de colunas por tick —
+pode demorar alguns minutos pro mapa inteiro (2000×2000), sem travar o servidor.
+
+**Desmoronamento**: `br:zone_start` sorteia um novo centro/raio menor a cada fase (sempre
+contido na área anterior), avisa "zona segura" com contagem, depois remove os blocos que
+ficaram de fora em lotes ("zona de desmoronamento"), pausa, e repete até o raio mínimo
+(`CONFIG.zone.minRadius`). A área restante fica disponível para outros sistemas via
+`getRemainingArea()` / `randomPointInRemaining()` em `src/systems/zone.ts` — é o dado que o
+sobrevoo do dragão (próximo item do roadmap) vai reaproveitar.
 
 ## Pontos a validar em jogo (marcados no código)
 
