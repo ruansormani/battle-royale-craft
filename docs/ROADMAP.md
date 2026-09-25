@@ -7,7 +7,7 @@ Ordem de implementação. Cada sistema fica em `src/systems/` e é testável iso
 - [x] §9 Bloqueio do Nether (`netherBlock.ts`)
 - [x] §1 Script único de "ilha flutuante" (`floatingIsland.ts`) — **validar em jogo**
 - [x] §5 Desmoronamento do mapa (`zone.ts`) — **validar em jogo**
-- [ ] §4 Sobrevoo pós-queda (pouso aleatório com teto de tentativas → centro; pilotagem; `dragon_fireball`)
+- [x] §4 Sobrevoo pós-queda (`dragonFlight.ts`) — **validar em jogo**
 - [ ] §7 Times: chat por `targets`, fogo amigo desfeito por script, menu `ActionFormData` por item
 - [ ] §12 Caído → revive, tag de reviver, Token da Imortalidade, espectador do próprio time
 - [ ] §11 Loot tables, crafting do isqueiro, trocas de aldeão por vila, casas via `structureManager.place()`

@@ -68,4 +68,44 @@ export const CONFIG = {
     minColumnsPerTick: 1,
     maxColumnsPerTick: 24,
   },
+
+  dragonFlight: {
+    /** Mesma entidade da queda inicial (§4) — reaproveitada aqui, como o roadmap prevê. */
+    entityId: "br:dragon",
+    /** Quanto tempo o dragão fica parado antes do primeiro sobrevoo pós-queda ("alguns minutos"). */
+    restAfterDropTicks: 20 * 60 * 3,
+    /** Velocidade do voo autônomo (sem piloto) — mais suave que a rota da queda inicial. */
+    cruiseSpeedBlocksPerTick: 1.0,
+    /** Tentativas de sortear um ponto com chão sólido antes de usar o centro garantido (§4). */
+    maxLandingAttemptsPerCycle: 12,
+    /** Quanto tempo (ticks) o dragão fica pousado à espera de um piloto — sorteado nesse intervalo. */
+    landStayTicksMin: 20 * 20,
+    landStayTicksMax: 20 * 60,
+
+    pilot: {
+      /** Velocidade do voo livre pilotado (blocos/tick). */
+      speedBlocksPerTick: 1.6,
+      /** Inclinação máxima de subida/descida, pra não ficar estranho visualmente. */
+      maxPitchDeg: 45,
+      /** Limites de altura durante o voo livre — placeholders, ajustar após medir o mapa. */
+      minY: 40,
+      maxY: 280,
+    },
+
+    fireball: {
+      /**
+       * Gatilho do ataque: item VANILLA (sem asset novo — não há como gerar textura
+       * customizada neste projeto) dado na mão secundária do piloto (salva/restaura o que
+       * já estava lá). `itemUse` nesse item específico (marcado por dynamic property)
+       * dispara o `dragon_fireball`. Não dá pra interceptar o botão de ataque nativo
+       * enquanto o jogador está montado numa entidade passiva — ver nota em dragonFlight.ts.
+       */
+      itemTypeId: "minecraft:blaze_rod",
+      itemName: "§cChifre do Dragão",
+      /** Velocidade de disparo do dragon_fireball. */
+      speed: 1.6,
+      /** Intervalo mínimo entre disparos do mesmo piloto. */
+      cooldownTicks: 20 * 3,
+    },
+  },
 } as const;

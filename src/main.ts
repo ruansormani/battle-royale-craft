@@ -9,9 +9,13 @@
  *                                      abaixo de CONFIG.map.floorY
  *   /scriptevent br:zone_start      → inicia o desmoronamento por fases (§5)
  *   /scriptevent br:zone_stop       → encerra o desmoronamento (não desfaz o que já sumiu)
+ *   /scriptevent br:flight_spawn    → cria um dragão de teste já na fase de pouso (§4,
+ *                                      sobrevoo — pula o descanso inicial, só pra testar)
+ *   /scriptevent br:flight_stop     → encerra o sobrevoo e ejeta quem estiver montado
  */
 import { system, world } from "@minecraft/server";
 import { startDragonDrop, stopDragonDrop } from "./systems/dragonDrop";
+import { spawnFlightTestDragon, startDragonFlightSystem, stopDragonFlight } from "./systems/dragonFlight";
 import { startFloatingIsland } from "./systems/floatingIsland";
 import { startNetherBlock } from "./systems/netherBlock";
 import { startZoneCollapse, stopZoneCollapse } from "./systems/zone";
@@ -19,6 +23,7 @@ import { log } from "./util/log";
 
 world.afterEvents.worldLoad.subscribe(() => {
   startNetherBlock();
+  startDragonFlightSystem();
   log("Addon Battle Royale carregado.");
 });
 
@@ -38,6 +43,12 @@ system.afterEvents.scriptEventReceive.subscribe((ev) => {
       break;
     case "br:zone_stop":
       stopZoneCollapse("comando");
+      break;
+    case "br:flight_spawn":
+      spawnFlightTestDragon();
+      break;
+    case "br:flight_stop":
+      stopDragonFlight("comando");
       break;
   }
 });

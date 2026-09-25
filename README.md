@@ -67,6 +67,8 @@ Como operador (no jogo ou no console do BDS):
 | `/scriptevent br:make_floating` | **Preparação do mapa, roda uma vez só.** Remove tudo abaixo de `CONFIG.map.floorY` |
 | `/scriptevent br:zone_start` | Inicia o desmoronamento por fases (zona segura → zona de desmoronamento) |
 | `/scriptevent br:zone_stop` | Encerra o desmoronamento (não desfaz blocos já removidos) |
+| `/scriptevent br:flight_spawn` | Cria um dragão de teste direto na fase de pouso (pula o descanso inicial) |
+| `/scriptevent br:flight_stop` | Encerra o sobrevoo e ejeta quem estiver montado |
 
 Na queda: agache pra pular do dragão e, no ar, aperte pular pra abrir a asa.
 Quem não pular até o fim da rota é ejetado à força.
@@ -84,6 +86,29 @@ ficaram de fora em lotes ("zona de desmoronamento"), pausa, e repete até o raio
 `getRemainingArea()` / `randomPointInRemaining()` em `src/systems/zone.ts` — é o dado que o
 sobrevoo do dragão (próximo item do roadmap) vai reaproveitar.
 
+**Sobrevoo pós-queda**: depois que a queda termina (`br:drop_stop` ou fim da rota), o mesmo
+dragão é assumido pelo sistema `dragonFlight.ts` automaticamente:
+
+1. Fica parado por alguns minutos (`CONFIG.dragonFlight.restAfterDropTicks`).
+2. Sorteia um ponto dentro da área que ainda existe (reaproveita `zone.ts`), acha o chão por
+   baixo dele (um candidato por tick, nunca busca sem limite — depois de
+   `maxLandingAttemptsPerCycle` tentativas usa o centro exato garantido), voa até lá e pousa.
+3. Pousado, fica esperando: o primeiro jogador que montar vira o piloto. Só um piloto por vez —
+   qualquer outro que tentar montar junto é ejetado na hora (evita alguém cair sem controle se
+   o piloto desmontar no meio do voo). Se ninguém montar depois de um tempo, decola de novo
+   pro próximo ponto.
+4. Pilotando: a direção que o jogador olha é a direção do voo (livre em 3D, sem cair);
+   `minecraft:blaze_rod` renomeado ("Chifre do Dragão") na mão secundária é o gatilho do
+   ataque — usar o item dispara um `dragon_fireball` na direção que o piloto está olhando.
+   O item anterior da mão secundária é salvo e devolvido ao desmontar.
+5. Desmontou no meio do ar? O dragão desce e pousa embaixo de onde estava, e o ciclo continua.
+
+> **Por que um item vanilla pro ataque, e não o botão de ataque nativo?** A Script API não
+> expõe um jeito de interceptar o clique de ataque enquanto o jogador está montado numa
+> entidade passiva. E não há como gerar uma textura customizada neste projeto (sem assets de
+> imagem), então o gatilho é um item vanilla existente reaproveitado, sem tocar no resto do
+> inventário do jogador. Ver o comentário no topo de `src/systems/dragonFlight.ts`.
+
 ## Pontos a validar em jogo (marcados no código)
 
 - `minecraft:rideable` com 30 assentos: se o motor recusar algum assento, o jogador cai no
@@ -92,6 +117,9 @@ sobrevoo do dragão (próximo item do roadmap) vai reaproveitar.
   corrige com teleporte.
 - O visual usa a geometria/textura nativas do Ender Dragon (`geometry.dragon`), por enquanto
   sem animação de asa.
+- Pilotagem livre e ataque do sobrevoo (`dragonFlight.ts`) são implementados via script (ver
+  seção acima) — testar sensação de voo e o disparo do `dragon_fireball` em jogo antes de
+  fechar como definitivo.
 
 ## Áudio por proximidade (não implementado, de propósito)
 
