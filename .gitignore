@@ -1,0 +1,5 @@
+node_modules/
+dist/
+behavior_pack/scripts/
+*.mcaddon
+*.mcpack
