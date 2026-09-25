@@ -53,8 +53,12 @@ npm run typecheck
    ```
 5. Reinicie o servidor. No console deve aparecer `[BR] Addon Battle Royale carregado.`
 
-> O mundo precisa ter o mapa **BATTLE ROYALE ISLAND** (Protagnst) importado. Depois de importar,
-> meça o centro da ilha e atualize `CONFIG.map.centerX/centerZ` em `src/config.ts`.
+> **Sobre o mapa (revisado)**: o mapa original planejado (BATTLE ROYALE ISLAND, Protagnst) foi
+> descartado — só existe pra Java, é pago via Patreon e depende de ~30 mods pra funcionar. O
+> terreno agora é **gerado pelo próprio Bedrock** (mundo normal, sem importar nada), com uma
+> arena nova sorteada a cada partida em vez de reaproveitar sempre o mesmo lugar (ver
+> `docs/DESIGN.md` §1). Isso ainda está sendo implementado — por enquanto `CONFIG.map.centerX/centerZ`
+> continua sendo um ponto fixo de teste.
 
 ## Testar
 

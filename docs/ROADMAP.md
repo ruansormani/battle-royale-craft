@@ -5,16 +5,27 @@ Ordem de implementação. Cada sistema fica em `src/systems/` e é testável iso
 - [x] Estrutura do projeto (manifests, build TS, README, empacotamento)
 - [x] §4 Queda inicial — dragão em linha reta + asa (`dragonDrop.ts`) — **validar em jogo**
 - [x] §9 Bloqueio do Nether (`netherBlock.ts`)
-- [x] §1 Script único de "ilha flutuante" (`floatingIsland.ts`) — **validar em jogo**
+- [x] §1 Script único de "ilha flutuante" (`floatingIsland.ts`) — **validar em jogo** —
+      **atenção: precisa virar automático por arena, ver item abaixo (mapa original descartado)**
 - [x] §5 Desmoronamento do mapa (`zone.ts`) — **validar em jogo**
 - [x] §4 Sobrevoo pós-queda + pilotagem estilo criativo + Poder 1/Poder 2 de ataque
       (`dragonFlight.ts`) — **validar em jogo**
 - [x] §3 Lobby, versão simples de teste (`lobby.ts`) — **validar em jogo**
 - [x] Cadeia automática de partida: lobby → queda → (fim da queda) dragão autônomo E zona
       começam sozinhos, sem comando manual — **validar em jogo**
+- [ ] **§1 (revisado)** Mapa original (Protagnst) descartado — só Java, pago, precisa de mods.
+      Terreno agora é gerado pelo próprio Bedrock, com arena nova (centro nunca repetido) a cada
+      partida — precisa: escolher próximo centro, carregar/gerar a área, rodar a ilha flutuante
+      automaticamente ali (hoje é manual/uma vez só)
+- [ ] §11 (parcial) Casa de encantamento: construir com Bloco de Estrutura, colar por arena com
+      `structureManager.place()` ajustando pelo chão real do ponto — só essa estrutura por
+      enquanto (construção incremental, testar antes de partir pra vila/casa de poções)
 - [ ] §7 Times: chat por `targets`, fogo amigo desfeito por script, menu `ActionFormData` por item
-- [ ] §12 Caído → revive, tag de reviver, Token da Imortalidade, espectador do próprio time
-- [ ] §11 Loot tables, crafting do isqueiro, trocas de aldeão por vila, casas via `structureManager.place()`
+- [ ] §12 Caído → revive; tag de reviver = Name Tag vanilla com o nome do jogador morto, só
+      dropa em 2x2/4x4, só o time pega (entidade customizada, não item de verdade — Script API
+      não garante bloquear pickup vanilla por time), some sozinha depois de um tempo se ninguém
+      pegar; Token da Imortalidade; espectador do próprio time — depende do §7 (times) existir
+- [ ] §11 (restante) Loot tables, crafting do isqueiro, trocas de aldeão por vila
 - [ ] §6 Colapso de construção de jogador (flood-fill com teto)
 - [ ] §13 Bots de teste (4, padrão Genesis)
 - [ ] §3 Lobby fase 2 (produção)
